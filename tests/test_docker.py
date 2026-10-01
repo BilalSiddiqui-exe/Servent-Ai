@@ -23,7 +23,9 @@ checks = []
 
 def check(name, ok, detail=""):
     checks.append((name, bool(ok), detail))
-    print("  %s %s%s" % ("PASS" if ok else "FAIL", name, (" - " + detail) if detail else ""))
+    # Detail is diagnostic, so only show it when something actually went wrong.
+    shown = detail if not ok else ""
+    print("  %s %s%s" % ("PASS" if ok else "FAIL", name, (" - " + shown) if shown else ""))
 
 
 print("== Dockerfile ==")
@@ -87,6 +89,35 @@ check("plain subprocess execution unaffected", "runner-ok" in out and "exit=0" i
 print("\n== docker cli present ==")
 which = subprocess.run(["docker", "--version"], capture_output=True, text=True)
 check("docker cli on PATH", which.returncode == 0, which.stdout.strip() or which.stderr.strip()[:60])
+
+# Parsing the compose file needs only the CLI, not the daemon, so this catches a
+# broken compose file (a misindented block, a bad key) on a machine that cannot
+# build anything. An earlier `healthcheck:` nested wrongly under `networks:` was
+# invisible locally and only surfaced in CI.
+compose = subprocess.run(
+    ["docker", "compose", "config", "--quiet"],
+    capture_output=True, text=True, cwd=str(ROOT),
+)
+check("docker-compose.yml parses (no daemon needed)", compose.returncode == 0,
+      (compose.stderr or compose.stdout).strip().splitlines()[-1] if (compose.stderr or compose.stdout).strip() else "")
+
+# The L4 firewall can only name an exact subnet if the compose network pins one,
+# so assert the resolved config rather than the raw YAML.
+resolved = subprocess.run(
+    ["docker", "compose", "config"], capture_output=True, text=True, cwd=str(ROOT),
+)
+if compose.returncode == 0:
+    check("resolved config pins the firewall subnet",
+          "172.30.0.0/24" in resolved.stdout,
+          "no 172.30.0.0/24 in the resolved config; the L4 rules name that exact subnet")
+    check("resolved config carries the healthcheck",
+          "healthcheck" in resolved.stdout)
+    check("resolved config keeps container hardening",
+          all(token in resolved.stdout for token in
+              ("no-new-privileges", "cap_drop", "pids_limit", "mem_limit")))
+else:
+    print("  SKIP  resolved-config checks because the compose file did not parse")
+
 daemon = subprocess.run(["docker", "info"], capture_output=True, text=True)
 check("docker daemon reachable (build NOT verified here if this fails)",
       daemon.returncode == 0,

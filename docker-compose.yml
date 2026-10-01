@@ -40,16 +40,16 @@ services:
     restart: unless-stopped
     networks:
       - servant-net
-      healthcheck:
-        test:
-          - CMD
-          - python
-          - -c
-          - "import sys,urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8501/_stcore/health', timeout=4).status == 200 else 1)"
-        interval: 30s
-        timeout: 5s
-        retries: 3
-        start_period: 25s
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import sys,urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8501/_stcore/health', timeout=4).status == 200 else 1)"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 25s
 
 # A fixed subnet is what makes the L4 host firewall meaningful: the drop rules
 # can name an exact source range instead of guessing which bridge Docker picked.
