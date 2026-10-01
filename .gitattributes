@@ -1,0 +1,16 @@
+# Normalise line endings in the repository itself. Without this, deploy/firewall.sh
+# is committed with CRLF on Windows and fails on Linux with
+# "bad interpreter: /bin/sh^M" or "unexpected end of file".
+* text=auto eol=lf
+
+# Shell scripts must be LF on every platform, never CRLF.
+*.sh text eol=lf
+
+# Binary: never touch.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary
+*.docx binary
+*.pkl binary

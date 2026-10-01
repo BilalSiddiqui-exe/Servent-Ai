@@ -1,0 +1,12 @@
+.git
+.gitignore
+__pycache__
+**/__pycache__
+*.pyc
+.pytest_cache
+workspace/
+tests/
+files/
+*.docx
+!demo_data/*.docx
+README.md.bak

@@ -1,0 +1,20 @@
+[theme]
+base = "light"
+primaryColor = "#0f766e"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f0fdfa"
+textColor = "#1f2937"
+font = "sans serif"
+
+[browser]
+gatherUsageStats = false
+
+[server]
+address = "127.0.0.1"
+headless = true
+fileWatcherType = "none"
+enableXsrfProtection = true
+maxUploadSize = 200
+
+[runner]
+fastReruns = true

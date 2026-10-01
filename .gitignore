@@ -1,0 +1,22 @@
+# Runtime data. This is where real documents end up after indexing:
+# workspace/kb.pkl is the embedded knowledge base, workspace/chats/ holds every
+# conversation, and workspace/out/ holds generated .docx and .pdf files.
+# None of this belongs in version control.
+workspace/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local editor / OS noise
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.bak
+
+# Test and diagnostic artefacts
+workspace/browser_streamlit.log
+*.log

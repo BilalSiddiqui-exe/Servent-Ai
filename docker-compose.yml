@@ -1,0 +1,65 @@
+# Servant AI - local, loopback-only.
+#
+# The port is published to 127.0.0.1 only, so nothing on the LAN can reach the UI.
+# Override the model server with:  LLM_BASE_URL=http://host.docker.internal:8080/v1 docker compose up
+
+services:
+  servant:
+    build: .
+    image: servant-ai:latest
+    container_name: servant-ai
+    ports:
+      - "127.0.0.1:8501:8501"
+    environment:
+      LLM_BASE_URL: "${LLM_BASE_URL:-http://host.docker.internal:11434/v1}"
+      TESSERACT_CMD: "/usr/bin/tesseract"
+      HF_HUB_OFFLINE: "1"
+      HUGGINGFACE_HUB_OFFLINE: "1"
+      HF_HUB_DISABLE_TELEMETRY: "1"
+      STREAMLIT_BROWSER_GATHER_USAGE_STATS: "false"
+      ANONYMIZED_TELEMETRY: "False"
+      DO_NOT_TRACK: "1"
+      NO_PROXY: "*"
+    volumes:
+      # Indexed documents, generated .docx files and netlog.jsonl survive rebuilds.
+      - servant-workspace:/app/workspace
+      # Optional: run model-authored code in a throwaway container with no network.
+      # Requires a volume of the Docker socket, which is itself a large privilege,
+      # so it is off by default. See README section 5.
+      # - /var/run/docker.sock:/var/run/docker.sock
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    # Hardening that does not need testing to trust: no root, no new privileges,
+    # no Linux capabilities, and a ceiling on runaway processes and memory.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 512
+    mem_limit: 2g
+    restart: unless-stopped
+    networks:
+      - servant-net
+      healthcheck:
+        test:
+          - CMD
+          - python
+          - -c
+          - "import sys,urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8501/_stcore/health', timeout=4).status == 200 else 1)"
+        interval: 30s
+        timeout: 5s
+        retries: 3
+        start_period: 25s
+
+# A fixed subnet is what makes the L4 host firewall meaningful: the drop rules
+# can name an exact source range instead of guessing which bridge Docker picked.
+# See deploy/firewall.sh and README section 5.
+networks:
+  servant-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: "${SERVANT_SUBNET:-172.30.0.0/24}"
+
+volumes:
+  servant-workspace:
